@@ -221,39 +221,39 @@ else
 	echo "and are still viable to date, unlike some default OpenVPN options"
 	echo ''
 	echo "Choose which cipher you want to use for the data channel:"
-	echo "   1) AES-128-CBC (fastest and sufficiently secure for everyone, recommended)"
-	echo "   2) AES-192-CBC"
-	echo "   3) AES-256-CBC"
+	echo "   1) AES-128-GCM (fastest and sufficiently secure for everyone, recommended)"
+	echo "   2) AES-192-GCM"
+	echo "   3) AES-256-GCM"
 	echo "Alternatives to AES, use them only if you know what you're doing."
 	echo "They are relatively slower but as secure as AES."
-	echo "   4) CAMELLIA-128-CBC"
-	echo "   5) CAMELLIA-192-CBC"
-	echo "   6) CAMELLIA-256-CBC"
-	echo "   7) SEED-CBC"
+	echo "   4) CAMELLIA-128-GCM"
+	echo "   5) CAMELLIA-192-GCM"
+	echo "   6) CAMELLIA-256-GCM"
+	echo "   7) SEED-GCM"
 	while [[ $CIPHER != "1" && $CIPHER != "2" && $CIPHER != "3" && $CIPHER != "4" && $CIPHER != "5" && $CIPHER != "6" && $CIPHER != "7" ]]; do
 		read -p "Cipher [1-7]: " -e -i 1 CIPHER
 	done
 	case $CIPHER in
 		1)
-		CIPHER="cipher AES-128-CBC"
+		CIPHER="cipher AES-128-GCM"
 		;;
 		2)
-		CIPHER="cipher AES-192-CBC"
+		CIPHER="cipher AES-192-GCM"
 		;;
 		3)
-		CIPHER="cipher AES-256-CBC"
+		CIPHER="cipher AES-256-GCM"
 		;;
 		4)
-		CIPHER="cipher CAMELLIA-128-CBC"
+		CIPHER="cipher CAMELLIA-128-GCM"
 		;;
 		5)
-		CIPHER="cipher CAMELLIA-192-CBC"
+		CIPHER="cipher CAMELLIA-192-GCM"
 		;;
 		6)
-		CIPHER="cipher CAMELLIA-256-CBC"
+		CIPHER="cipher CAMELLIA-256-GCM"
 		;;
 		5)
-		CIPHER="cipher SEED-CBC"
+		CIPHER="cipher SEED-GCM"
 		;;
 	esac
 	echo ""
@@ -331,9 +331,16 @@ else
 			wget -O - https://swupdate.openvpn.net/repos/repo-public.gpg | apt-key add -
 			apt-get update
 		fi
+		# Ubuntu 16.04
+		if [[ "$VERSION_ID" = 'VERSION_ID="16.04"' ]]; then
+			echo "deb http://build.openvpn.net/debian/openvpn/release/2.4 xenial main" > /etc/apt/sources.list.d/openvpn-aptrepo.list
+			wget -O - https://swupdate.openvpn.net/repos/repo-public.gpg|apt-key add -
+			apt-get update && apt-get install openvpn
+		fi
 		# Ubuntu >= 16.04 and Debian > 8 have OpenVPN > 2.3.3 without the need of a third party repository.
 		# The we install OpenVPN
-		apt-get install openvpn iptables openssl wget ca-certificates curl -y
+		#Uncomment line below for older OpenVPN releases and comment out lines 335 - 339
+		# apt-get install openvpn iptables openssl wget ca-certificates curl -y
 	elif [[ "$OS" = 'centos' ]]; then
 		yum install epel-release -y
 		yum install openvpn iptables openssl wget ca-certificates curl -y
@@ -456,19 +463,21 @@ ifconfig-pool-persist ipp.txt" >> /etc/openvpn/server.conf
 		;;
 	esac
 echo 'push "redirect-gateway def1 bypass-dhcp" '>> /etc/openvpn/server.conf
-echo "crl-verify crl.pem
+echo "max-clients 1
+crl-verify crl.pem
 ca ca.crt
 cert server.crt
 key server.key
-tls-auth tls-auth.key 0
+tls-crypt tls-crypt.key 0
 dh dh.pem
-auth SHA256
+auth SHA512
 $CIPHER
 tls-server
 tls-version-min 1.2
-tls-cipher TLS-DHE-RSA-WITH-AES-128-GCM-SHA256
+tls-cipher TLS-ECDHE-RSA-WITH-AES-256-GCM-SHA384
+reneg-sec 60
 status openvpn.log
-verb 3" >> /etc/openvpn/server.conf
+verb 5" >> /etc/openvpn/server.conf
 
 	# Create the sysctl configuration file if needed (mainly for Arch Linux)
 	if [[ ! -e $SYSCTL ]]; then
@@ -579,13 +588,14 @@ nobind
 persist-key
 persist-tun
 remote-cert-tls server
-auth SHA256
+auth SHA512
 $CIPHER
 tls-client
 tls-version-min 1.2
-tls-cipher TLS-DHE-RSA-WITH-AES-128-GCM-SHA256
+tls-cipher TLS-ECDHE-RSA-WITH-AES-256-GCM-SHA384
+reneg-sec 60
 setenv opt block-outside-dns
-verb 3" >> /etc/openvpn/client-template.txt
+verb 5" >> /etc/openvpn/client-template.txt
 
 	# Generate the custom client.ovpn
 	newclient "$CLIENT"
