@@ -68,9 +68,9 @@ newclient () {
 	cat /etc/openvpn/easy-rsa/pki/private/$1.key >> ~/$1.ovpn
 	echo "</key>" >> ~/$1.ovpn
 	echo "key-direction 1" >> ~/$1.ovpn
-	echo "<tls-auth>" >> ~/$1.ovpn
-	cat /etc/openvpn/tls-auth.key >> ~/$1.ovpn
-	echo "</tls-auth>" >> ~/$1.ovpn
+	echo "<tls-crypt>" >> ~/$1.ovpn
+	cat /etc/openvpn/tls-crypt.key >> ~/$1.ovpn
+	echo "</tls-crypt>" >> ~/$1.ovpn
 }
 
 # Try to get our IP from the system and fallback to the Internet.
@@ -414,8 +414,8 @@ WantedBy=multi-user.target" > /etc/systemd/system/rc-local.service
 	./easyrsa build-server-full server nopass
 	./easyrsa build-client-full $CLIENT nopass
 	./easyrsa gen-crl
-	# generate tls-auth key
-	openvpn --genkey --secret /etc/openvpn/tls-auth.key
+	# generate tls-crypt key
+	openvpn --genkey --secret /etc/openvpn/tls-crypt.key
 	# Move all the generated files
 	cp pki/ca.crt pki/private/ca.key dh.pem pki/issued/server.crt pki/private/server.key /etc/openvpn/easy-rsa/pki/crl.pem /etc/openvpn
 	# Make cert revocation list readable for non-root
