@@ -221,39 +221,39 @@ else
 	echo "and are still viable to date, unlike some default OpenVPN options"
 	echo ''
 	echo "Choose which cipher you want to use for the data channel:"
-	echo "   1) AES-128-GCM (fastest and sufficiently secure for everyone, recommended)"
-	echo "   2) AES-192-GCM"
-	echo "   3) AES-256-GCM"
+	echo "   1) AES-128-CBC (fastest and sufficiently secure for everyone, recommended)"
+	echo "   2) AES-192-CBC"
+	echo "   3) AES-256-CBC"
 	echo "Alternatives to AES, use them only if you know what you're doing."
 	echo "They are relatively slower but as secure as AES."
-	echo "   4) CAMELLIA-128-GCM"
-	echo "   5) CAMELLIA-192-GCM"
-	echo "   6) CAMELLIA-256-GCM"
-	echo "   7) SEED-GCM"
+	echo "   4) CAMELLIA-128-CBC"
+	echo "   5) CAMELLIA-192-CBC"
+	echo "   6) CAMELLIA-256-CBC"
+	echo "   7) SEED-CBC"
 	while [[ $CIPHER != "1" && $CIPHER != "2" && $CIPHER != "3" && $CIPHER != "4" && $CIPHER != "5" && $CIPHER != "6" && $CIPHER != "7" ]]; do
 		read -p "Cipher [1-7]: " -e -i 1 CIPHER
 	done
 	case $CIPHER in
 		1)
-		CIPHER="cipher AES-128-GCM"
+		CIPHER="cipher AES-128-CBC"
 		;;
 		2)
-		CIPHER="cipher AES-192-GCM"
+		CIPHER="cipher AES-192-CBC"
 		;;
 		3)
-		CIPHER="cipher AES-256-GCM"
+		CIPHER="cipher AES-256-CBC"
 		;;
 		4)
-		CIPHER="cipher CAMELLIA-128-GCM"
+		CIPHER="cipher CAMELLIA-128-CBC"
 		;;
 		5)
-		CIPHER="cipher CAMELLIA-192-GCM"
+		CIPHER="cipher CAMELLIA-192-CBC"
 		;;
 		6)
-		CIPHER="cipher CAMELLIA-256-GCM"
+		CIPHER="cipher CAMELLIA-256-CBC"
 		;;
 		5)
-		CIPHER="cipher SEED-GCM"
+		CIPHER="cipher SEED-CBC"
 		;;
 	esac
 	echo ""
@@ -429,14 +429,18 @@ WantedBy=multi-user.target" > /etc/systemd/system/rc-local.service
 		echo "proto tcp" >> /etc/openvpn/server.conf
 	fi
 	echo "dev tun
+tun-mtu 1500
+tun-mtu-extra 32
+mssfix 1450
+reneg-sec 60
 user nobody
-group $NOGROUP
+group nogroup
 persist-key
 persist-tun
 keepalive 10 120
 topology subnet
 server 10.8.0.0 255.255.255.0
-ifconfig-pool-persist ipp.txt" >> /etc/openvpn/server.conf
+ifconfig-pool-persist /etc/openvpn/ipp.txt" >> /etc/openvpn/server.conf
 	# DNS resolvers
 	case $DNS in
 		1)
@@ -464,20 +468,20 @@ ifconfig-pool-persist ipp.txt" >> /etc/openvpn/server.conf
 	esac
 echo 'push "redirect-gateway def1 bypass-dhcp" '>> /etc/openvpn/server.conf
 echo "max-clients 1
-crl-verify crl.pem
-ca ca.crt
-cert server.crt
-key server.key
-tls-crypt tls-crypt.key 0
-dh dh.pem
+crl-verify /etc/openvpn/crl.pem
+ca /etc/openvpn/ca.crt
+cert /etc/openvpn/server.crt
+key /etc/openvpn/server.key
+tls-crypt /etc/openvpn/tls-crypt.key 0
+dh /etc/openvpn/dh.pem
 auth SHA512
 $CIPHER
 tls-server
 tls-version-min 1.2
 tls-cipher TLS-ECDHE-RSA-WITH-AES-256-GCM-SHA384
-reneg-sec 60
 status openvpn.log
-verb 5" >> /etc/openvpn/server.conf
+fast-io
+verb 3" >> /etc/openvpn/server.conf
 
 	# Create the sysctl configuration file if needed (mainly for Arch Linux)
 	if [[ ! -e $SYSCTL ]]; then
@@ -583,7 +587,12 @@ verb 5" >> /etc/openvpn/server.conf
 	fi
 	echo "remote $IP $PORT
 dev tun
+user nobody
+group nobody
 resolv-retry infinite
+tun-mtu 1500
+tun-mtu-extra 32
+mssfix 1450
 nobind
 persist-key
 persist-tun
@@ -593,9 +602,9 @@ $CIPHER
 tls-client
 tls-version-min 1.2
 tls-cipher TLS-ECDHE-RSA-WITH-AES-256-GCM-SHA384
-reneg-sec 60
-setenv opt block-outside-dns
-verb 5" >> /etc/openvpn/client-template.txt
+verb 3
+fast-io
+key-direction 1" >> /etc/openvpn/client-template.txt
 
 	# Generate the custom client.ovpn
 	newclient "$CLIENT"
