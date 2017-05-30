@@ -422,13 +422,16 @@ WantedBy=multi-user.target" > /etc/systemd/system/rc-local.service
 	chmod 644 /etc/openvpn/crl.pem
 	
 	# Generate server.conf
+	# Find out if the machine uses group nogroup or group nobody and edit /etc/openvpn/server.conf if needed
 	echo "port $PORT" > /etc/openvpn/server.conf
 	if [[ "$PROTOCOL" = 'UDP' ]]; then
-		echo "proto udp" >> /etc/openvpn/server.conf
+		echo "proto udp
+		fast-io" >> /etc/openvpn/server.conf
 	elif [[ "$PROTOCOL" = 'TCP' ]]; then
-		echo "proto tcp" >> /etc/openvpn/server.conf
+		echo "proto tcp-server
+		tcp-nodelay" >> /etc/openvpn/server.conf
 	fi
-	echo "dev tun
+	echo "dev tun	
 tun-mtu 1500
 tun-mtu-extra 32
 mssfix 1450
@@ -467,6 +470,8 @@ ifconfig-pool-persist /etc/openvpn/ipp.txt" >> /etc/openvpn/server.conf
 		;;
 	esac
 echo 'push "redirect-gateway def1 bypass-dhcp" '>> /etc/openvpn/server.conf
+
+# Change "max-clients 1" to desired number or comment out to remove limit
 echo "max-clients 1
 crl-verify /etc/openvpn/crl.pem
 ca /etc/openvpn/ca.crt
@@ -480,7 +485,7 @@ tls-server
 tls-version-min 1.2
 tls-cipher TLS-ECDHE-RSA-WITH-AES-256-GCM-SHA384
 status openvpn.log
-fast-io
+compress lz4
 verb 3" >> /etc/openvpn/server.conf
 
 	# Create the sysctl configuration file if needed (mainly for Arch Linux)
@@ -579,9 +584,11 @@ verb 3" >> /etc/openvpn/server.conf
 		fi
 	fi
 	# client-template.txt is created so we have a template to add further users later
+	# check whether
 	echo "client" > /etc/openvpn/client-template.txt
 	if [[ "$PROTOCOL" = 'UDP' ]]; then
-		echo "proto udp" >> /etc/openvpn/client-template.txt
+		echo "proto udp
+		fast-io" >> /etc/openvpn/client-template.txt
 	elif [[ "$PROTOCOL" = 'TCP' ]]; then
 		echo "proto tcp-client" >> /etc/openvpn/client-template.txt
 	fi
@@ -593,6 +600,7 @@ resolv-retry infinite
 tun-mtu 1500
 tun-mtu-extra 32
 mssfix 1450
+reneg-sec 0
 nobind
 persist-key
 persist-tun
@@ -603,9 +611,10 @@ tls-client
 tls-version-min 1.2
 tls-cipher TLS-ECDHE-RSA-WITH-AES-256-GCM-SHA384
 verb 3
-fast-io
+compress lz4
 key-direction 1" >> /etc/openvpn/client-template.txt
 
+	# Find out if the machine uses group nogroup or group nobody and edit client.ovpn if needed
 	# Generate the custom client.ovpn
 	newclient "$CLIENT"
 	echo ""

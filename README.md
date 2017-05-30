@@ -1,3 +1,6 @@
+## This is a fork of https://github.com/Angristan/OpenVPN-install
+It's updated to the latest OpenVPN 2.4.2 release for Ubuntu 16.04 and uses tls-crypt to authenticate with AES GCM and ECDHE ciphers. 
+
 ## openvpn-install
 Secure OpenVPN installer for Debian, Ubuntu, CentOS and Arch Linux.
 
